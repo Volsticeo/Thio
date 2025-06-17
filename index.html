@@ -4,13 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Thio - AI Voice Assistant</title>
+  <link rel="icon" href="icon.webp" type="webp">
   <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
 </head>
 <body>
+  <div class="ambient-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+  </div>
+  <div id="cursor-light"></div>
   <div class="container glass">
     <header class="header">
       <h1>Thio — AI Voice Assistant</h1>
-      <p>Ask me anything via text or voice. I'm ready!</p>
+
       <div class="status-indicator">
         <div class="status-dot" id="statusDot"></div>
         <span id="statusText">Ready to chat</span>
@@ -19,12 +27,6 @@
 
     <main class="chat-container">
       <div class="messages" id="messages">
-        <div class="message bot-message">
-          <div class="message-content">
-            <strong>🤖 Thio:</strong> Hello! I'm ready for your questions. You can type or use the mic!
-          </div>
-          <div class="message-time" id="botTime"></div>
-        </div>
       </div>
 
       <div class="input-area">
