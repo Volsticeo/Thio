@@ -24,6 +24,13 @@ Keep responses conversational and not too long unless specifically asked for det
             greeting: "Hi there! I'm Thio, your AI voice assistant and friend. How can I help you today?"
         };
 
+        this.sounds = {
+            send: new Audio("sounds/send.mp3"),
+            chime: new Audio("sounds/chime.wav"),
+            micOn: new Audio("sounds/mic-on.mp3"),
+            stop: new Audio("sounds/stop.wav")
+        };
+
         // Predefined responses for common questions
         this.responsePatterns = {
             greeting: [
@@ -67,22 +74,6 @@ Keep responses conversational and not too long unless specifically asked for det
             google: {
                 url: 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent',
                 apiKey: 'AIzaSyChv_-qIo_Z9g3DH-9N2fYSTKKQuC8xRIk', // Add your Google API key here
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            },
-            // Cohere (Free tier - Requires API key)
-            cohere: {
-                url: 'https://api.cohere.ai/v1/generate',
-                apiKey: '', // Add your Cohere API key here
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            },
-            // Hugging Face (Requires API key now)
-            huggingface: {
-                url: 'https://api-inference.huggingface.co/models/microsoft/DialoGPT-large',
-                apiKey: '', // Add your Hugging Face API key here
                 headers: {
                     'Content-Type': 'application/json',
                 }
@@ -301,7 +292,7 @@ Keep responses conversational and not too long unless specifically asked for det
                     this.addMessage(`Switched to ${modelName}`, 'system');
 
                     if (e.target.value !== 'fallback') {
-                        this.addMessage('Note: This model requires an API key to be configured in the code.', 'system');
+
                     }
                 }
             });
@@ -424,8 +415,10 @@ Keep responses conversational and not too long unless specifically asked for det
 
         if (this.isListening) {
             this.recognition.stop();
+            this.sounds.stop?.play();  // 🔇 mic off sound
         } else {
             this.recognition.start();
+            this.sounds.micOn?.play(); // 🎙️ mic on sound
         }
     }
 
@@ -458,7 +451,12 @@ Keep responses conversational and not too long unless specifically asked for det
             utterance.voice = preferredVoice;
         }
 
+        this.sounds.chime?.play();  // 🔊 play chime sound
         this.synthesis.speak(utterance);
+        gsap.fromTo("#cursor-light",
+            {scale: 1, opacity: 0.3},
+            {scale: 1.3, opacity: 0.6, duration: 0.4, yoyo: true, repeat: 1, ease: "sine.inOut"}
+        );
     }
 
     async sendMessage() {
@@ -467,6 +465,8 @@ Keep responses conversational and not too long unless specifically asked for det
 
     this.isProcessing = true;
     this.updateStatus('Thio is thinking...', '#ffa726');
+
+    this.sounds.send?.play();  // 🔊 play send sound
 
     // Add user message to chat
     this.addMessage(message, 'user');
@@ -525,10 +525,6 @@ Keep responses conversational and not too long unless specifically asked for det
                     return await this.getGoogleResponse(contextualMessage);
                 case 'openai':
                     return await this.getOpenAIResponse(contextualMessage);
-                case 'cohere':
-                    return await this.getCohereResponse(contextualMessage);
-                case 'huggingface':
-                    return await this.getHuggingFaceResponse(contextualMessage);
                 default:
                     return this.getFallbackResponse(message);
             }
@@ -602,115 +598,6 @@ Keep responses conversational and not too long unless specifically asked for det
         return responses[Math.floor(Math.random() * responses.length)];
     }
 
-    async getHuggingFaceResponse(message) {
-        if (!this.apiConfig.huggingface.apiKey) {
-            throw new Error('Hugging Face API key not configured');
-        }
-
-        // Try a series of available models in order of preference
-        const modelOptions = [
-            'distilgpt2',
-            'facebook/blenderbot-400M-distill',
-            'microsoft/DialoGPT-small',
-            'google/flan-t5-small'
-        ];
-
-        for (const model of modelOptions) {
-            try {
-                const modelUrl = `https://api-inference.huggingface.co/models/${model}`;
-
-                let requestBody;
-
-                // Different request formats for different model types
-                if (model.includes('blenderbot')) {
-                    requestBody = {
-                        inputs: message,
-                        parameters: {
-                            max_length: 100,
-                            temperature: 0.7,
-                            do_sample: true
-                        },
-                        options: {
-                            wait_for_model: true,
-                            use_cache: false
-                        }
-                    };
-                } else if (model.includes('flan-t5')) {
-                    requestBody = {
-                        inputs: `Answer this question in a friendly, conversational way: ${message}`,
-                        parameters: {
-                            max_new_tokens: 100,
-                            temperature: 0.7
-                        },
-                        options: {
-                            wait_for_model: true
-                        }
-                    };
-                } else {
-                    // For GPT-style models
-                    requestBody = {
-                        inputs: `Human: ${message}\nAI: `,
-                        parameters: {
-                            max_new_tokens: 100,
-                            temperature: 0.7,
-                            return_full_text: false,
-                            stop: ["\nHuman:", "\n\n"]
-                        },
-                        options: {
-                            wait_for_model: true
-                        }
-                    };
-                }
-
-                const response = await fetch(modelUrl, {
-                    method: 'POST',
-                    headers: {
-                        ...this.apiConfig.huggingface.headers,
-                        'Authorization': `Bearer ${this.apiConfig.huggingface.apiKey}`
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-
-                    // Handle different response formats
-                    let responseText = '';
-
-                    if (Array.isArray(data) && data.length > 0) {
-                        responseText = data[0].generated_text || data[0].text || '';
-                    } else if (data.generated_text) {
-                        responseText = data.generated_text;
-                    } else if (typeof data === 'string') {
-                        responseText = data;
-                    }
-
-                    // Clean up the response
-                    if (responseText) {
-                        responseText = responseText
-                            .replace(`Human: ${message}\nAI: `, '')
-                            .replace(`Human: ${message}`, '')
-                            .trim();
-
-                        // If we got a valid response, return it
-                        if (responseText && responseText.length > 0) {
-                            return responseText;
-                        }
-                    }
-                }
-
-                // If this model didn't work, try the next one
-                console.log(`Model ${model} failed, trying next...`);
-
-            } catch (error) {
-                console.log(`Error with model ${model}:`, error);
-                // Continue to next model
-            }
-        }
-
-        // If all models failed, throw an error
-        throw new Error('All Hugging Face models failed or are unavailable');
-    }
 
     async getGoogleResponse(message) {
         if (!this.apiConfig.google.apiKey) {
@@ -779,33 +666,7 @@ Keep responses conversational and not too long unless specifically asked for det
         return data.choices[0]?.message?.content || "I'm having trouble generating a response right now.";
     }
 
-    async getCohereResponse(message) {
-        if (!this.apiConfig.cohere.apiKey) {
-            throw new Error('Cohere API key not configured');
-        }
 
-        const response = await fetch(this.apiConfig.cohere.url, {
-            method: 'POST',
-            headers: {
-                ...this.apiConfig.cohere.headers,
-                'Authorization': `Bearer ${this.apiConfig.cohere.apiKey}`
-            },
-            body: JSON.stringify({
-                model: 'command',
-                prompt: `${this.persona.personality}\n\nUser: ${message}\nThio:`,
-                max_tokens: 150,
-                temperature: 0.7,
-                stop_sequences: ["\nUser:"]
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return data.generations[0]?.text?.trim() || "I'm having trouble generating a response right now.";
-    }
 
     addMessage(content, sender) {
         const messageDiv = document.createElement('div');
@@ -831,6 +692,24 @@ Keep responses conversational and not too long unless specifically asked for det
         `;
 
         this.messagesContainer.appendChild(messageDiv);
+        if (sender === 'bot') {
+            const contentDiv = messageDiv.querySelector('.message-content');
+            const fullHTML = contentDiv.innerHTML;
+            const plainText = contentDiv.textContent;
+
+            contentDiv.innerHTML = ""; // clear it
+
+            let i = 0;
+            const interval = setInterval(() => {
+                if (i < plainText.length) {
+                    contentDiv.textContent += plainText[i++];
+                } else {
+                    clearInterval(interval);
+                    contentDiv.innerHTML = fullHTML; // restore formatted HTML
+                }
+            }, 8);
+        }
+
         this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
     }
 }
@@ -839,12 +718,105 @@ Keep responses conversational and not too long unless specifically asked for det
 document.addEventListener('DOMContentLoaded', () => {
     window.thio = new ThioVoiceAssistant();
 
-    // Load voices for speech synthesis
-    if ('speechSynthesis' in window) {
-        speechSynthesis.onvoiceschanged = () => {
-            // Voices are now loaded
-        };
-    }
+    // Page entry animation
+    gsap.from(".glass", {
+        duration: 1.2,
+        y: 50,
+        opacity: 0,
+        ease: "power3.out"
+    });
+
+    // GSAP status dot float
+    gsap.to("#statusDot", {
+        y: 4,
+        duration: 1.2,
+        yoyo: true,
+        repeat: -1,
+        ease: "sine.inOut"
+    });
+
+    // Floating ambient orb animation
+    gsap.to(".orb-1", {
+        x: 50,
+        y: 30,
+        duration: 12,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.inOut"
+    });
+
+    gsap.to(".orb-2", {
+        x: -40,
+        y: -20,
+        duration: 15,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.inOut"
+    });
+
+    // Cursor aura light tracker
+    const cursorLight = document.getElementById("cursor-light");
+    document.addEventListener("mousemove", (e) => {
+        gsap.to(cursorLight, {
+            x: e.clientX,
+            y: e.clientY,
+            duration: 0.2,
+            ease: "power2.out"
+        });
+    });
+
+    // Voice mic recording pulse with GSAP
+    const voiceBtn = document.getElementById('voiceBtn');
+    let pulseTween;
+
+    const observer = new MutationObserver(() => {
+        if (voiceBtn.classList.contains('recording') && !pulseTween) {
+            pulseTween = gsap.to(voiceBtn, {
+                scale: 1.08,
+                boxShadow: "0 0 15px rgba(255, 107, 107, 0.7)",
+                duration: 0.8,
+                repeat: -1,
+                yoyo: true,
+                ease: "power1.inOut"
+            });
+        } else if (!voiceBtn.classList.contains('recording') && pulseTween) {
+            pulseTween.kill();
+            gsap.to(voiceBtn, {scale: 1, boxShadow: "none", duration: 0.3});
+            pulseTween = null;
+        }
+    });
+
+    observer.observe(voiceBtn, {attributes: true});
+
+    // Animate message bubbles on insert
+    const messagesContainer = document.getElementById('messages');
+    const observerMessages = new MutationObserver((mutations) => {
+        mutations.forEach(mutation => {
+            mutation.addedNodes.forEach(node => {
+                if (node.classList?.contains('message')) {
+                    gsap.fromTo(node,
+                        {opacity: 0, y: 20},
+                        {opacity: 1, y: 0, duration: 0.5, ease: "power2.out"}
+                    );
+
+                    gsap.fromTo(node,
+                        {boxShadow: "0 0 20px rgba(255,255,255,0.05)"},
+                        {boxShadow: "0 0 0 transparent", duration: 0.8, ease: "expo.out"}
+                    );
+                }
+            });
+        });
+    });
+
+    observerMessages.observe(messagesContainer, {childList: true});
+    document.querySelectorAll(".send-btn, .voice-btn, .speak-btn, .stop-btn").forEach(btn => {
+        btn.addEventListener("mouseenter", () => {
+            gsap.to(btn, {scale: 1.07, duration: 0.3, ease: "power2.out"});
+        });
+        btn.addEventListener("mouseleave", () => {
+            gsap.to(btn, {scale: 1, duration: 0.3, ease: "power2.inOut"});
+        });
+    });
 });
 
 // Add some interactive animations
