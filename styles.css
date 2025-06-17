@@ -6,13 +6,42 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #0f0f1a, #101623);
+  background: #090a0f;
   color: #e0e0e0;
   min-height: 100vh;
   padding: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background:
+    radial-gradient(at 30% 20%, rgba(102, 126, 234, 0.15), transparent 60%),
+    radial-gradient(at 80% 70%, rgba(118, 75, 162, 0.12), transparent 60%),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 20px),
+    repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 20px),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.01), rgba(0, 0, 0, 0.05));
+  background-blend-mode: screen;
+  animation: gridShift 60s linear infinite;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+@keyframes gridShift {
+  0% {
+    background-position: 0 0, 0 0, 0 0, 0 0, 0 0;
+  }
+  100% {
+    background-position: 0 0, 0 0, 200px 200px, -200px -200px, 0 0;
+  }
 }
 
 .container {
@@ -149,25 +178,33 @@ body {
 .speak-btn,
 .stop-btn {
   border: none;
-  padding: 10px 14px;
+  padding: 12px 16px;
   font-size: 1rem;
   border-radius: 50%;
-  background: linear-gradient(135deg, #4ade80, #22d3ee);
-  color: white;
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #f0f0f0;
   cursor: pointer;
   margin-left: 10px;
-  transition: transform 0.2s ease;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
 }
 
 .send-btn:hover,
 .voice-btn:hover,
 .speak-btn:hover,
 .stop-btn:hover {
-  transform: scale(1.1);
+  transform: scale(1.07);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
 .voice-btn.recording {
-  background: linear-gradient(135deg, #ef4444, #f97316);
+  background: rgba(239, 68, 68, 0.15); /* subtle red glass */
+  border: 1px solid rgba(255, 99, 99, 0.25);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
 }
 
 .footer {
@@ -210,5 +247,146 @@ body {
 .messages {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.ambient-orbs {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  pointer-events: none;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(102,126,234,0.15) 0%, transparent 80%);
+  width: 200px;
+  height: 200px;
+  filter: blur(40px);
+  opacity: 0.5;
+}
+
+.orb-1 {
+  top: 10%;
+  left: 20%;
+}
+
+.orb-2 {
+  bottom: 10%;
+  right: 15%;
+}
+
+#cursor-light {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 200px;
+  height: 200px;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+  transform: translate(-50%, -50%);
+  z-index: -1;
+  mix-blend-mode: screen;
+  transition: opacity 0.3s ease;
+  opacity: 0.3;
+}
+
+
+/* Tablet adjustments */
+@media (max-width: 768px) {
+  .glass {
+    padding: 20px;
+  }
+
+  .header h1 {
+    font-size: 1.6rem;
+  }
+
+  .chat-container {
+    height: 400px;
+    padding: 16px;
+  }
+
+  .message {
+    font-size: 0.85rem;
+    padding: 12px 14px;
+  }
+
+  #textInput {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+  }
+
+  .send-btn,
+  .voice-btn,
+  .speak-btn,
+  .stop-btn {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .glass {
+    padding: 15px;
+    border-radius: 20px;
+  }
+
+  .header h1 {
+    font-size: 1.3rem;
+  }
+
+  .header p {
+    font-size: 0.85rem;
+  }
+
+  .chat-container {
+    height: 350px;
+    padding: 12px;
+  }
+
+  .message {
+    font-size: 0.8rem;
+    padding: 10px 12px;
+  }
+
+  .input-area {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .input-container {
+    width: 100%;
+  }
+
+  .voice-controls {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  #textInput {
+    font-size: 0.85rem;
+    padding: 10px 12px;
+  }
+
+  .send-btn,
+  .voice-btn,
+  .speak-btn,
+  .stop-btn {
+    padding: 10px;
+    font-size: 0.85rem;
+    margin-left: 0;
+  }
+
+  .footer p,
+  .tech-stack {
+    font-size: 0.7rem;
+  }
 }
 
